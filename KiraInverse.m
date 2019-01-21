@@ -2,7 +2,7 @@ BeginPackage["KiraInverse`"];
         
 Options[KiraInverse] = {Threads->1};
 
-KiraInverse[mat_List,OptionsPattern[]] := Module[{dim,dir,strm,err,res,masters,threads},
+KiraInverse[mat_List,OptionsPattern[]] := Module[{dim,dir,strm,err,res,threads},
     threads = OptionValue[Threads];
 
     dim = Dimensions[mat];
