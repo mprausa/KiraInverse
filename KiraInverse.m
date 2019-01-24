@@ -1,71 +1,73 @@
 BeginPackage["KiraInverse`"];
-        
-Options[KiraInverse] = {Threads->1};
+    KiraInverse;
 
-KiraInverse[mat_List,OptionsPattern[]] := Module[{dim,dir,strm,err,res,threads},
-    threads = OptionValue[Threads];
+    Begin["Private`"];
+        Options[KiraInverse] = {Threads->1};
 
-    dim = Dimensions[mat];
-    If [Length[dim] != 2 || dim[[1]] != dim[[2]], Return[$Failed]];
-    dim = First[dim];
+        KiraInverse[mat_List,OptionsPattern[]] := Module[{dim,dir,r,c,strm,err,res,threads},
+            threads = OptionValue[Threads];
 
-    dir = CreateDirectory[]; 
+            dim = Dimensions[mat];
+            If [Length[dim] != 2 || dim[[1]] != dim[[2]], Return[$Failed]];
+            dim = First[dim];
 
-    strm = OpenWrite[dir<>"/system"];
+            dir = CreateDirectory[]; 
 
-    Do[
-        WriteString[strm,"KiraINT["<>ToString[r]<>"]*(-1)\n"];
-        Do[
-            If [mat[[r,c]] === 0, Continue[]];
+            strm = OpenWrite[dir<>"/system"];
 
-            WriteString[strm,"KiraINT["<>ToString[c+dim]<>"]*("<>StringReplace[ToString[mat[[r,c]],InputForm]," "->""]<>")\n"];
-        ,{c,1,dim}];
-        WriteString[strm,"\n"];
-    ,{r,1,dim}];
-    
-    Close[strm];
+            Do[
+                WriteString[strm,"KiraINT["<>ToString[r]<>"]*(-1)\n"];
+                Do[
+                    If [mat[[r,c]] === 0, Continue[]];
 
-    WriteString[dir<>"/masters","KiraINT["<>ToString[#]<>"]\n"] &/@Range[dim];
-    WriteString[dir<>"/list","- ["<>ToString[#+dim]<>"]\n"] &/@Range[dim];
+                    WriteString[strm,"KiraINT["<>ToString[c+dim]<>"]*("<>StringReplace[ToString[mat[[r,c]],InputForm]," "->""]<>")\n"];
+                ,{c,1,dim}];
+                WriteString[strm,"\n"];
+            ,{r,1,dim}];
+            
+            Close[strm];
 
-    strm = OpenWrite[dir<>"/jobs.yaml"];
+            WriteString[dir<>"/masters","KiraINT["<>ToString[#]<>"]\n"] &/@Range[dim];
+            WriteString[dir<>"/list","- ["<>ToString[#+dim]<>"]\n"] &/@Range[dim];
 
-    WriteString[strm,"jobs:\n"];
-    WriteString[strm,"  - reduce_user_defined_system:\n"];
-    WriteString[strm,"      input_system: system\n"];
-    WriteString[strm,"      select_integrals:\n"];
-    WriteString[strm,"        select_mandatory_list:\n"];
-    WriteString[strm,"          - [KiraINT,list]\n"];
-    WriteString[strm,"      preferred_masters: masters\n"];
-    WriteString[strm,"      run_symmetries: true\n"];
-    WriteString[strm,"      run_initiate: true\n"];
-    WriteString[strm,"      run_triangular: true\n"];
-    WriteString[strm,"      run_back_substitution: true\n"];
-    WriteString[strm,"  - kira2math:\n"];
-    WriteString[strm,"      target:\n"];
-    WriteString[strm,"        - [KiraINT,list]\n"];
+            strm = OpenWrite[dir<>"/jobs.yaml"];
 
-    Close[strm];
-    
-    SetDirectory[dir];
-    err = Run["kira"<>If[threads>1," --parallel="<>ToString[threads],""]<>" jobs.yaml"];
-    ResetDirectory[];
+            WriteString[strm,"jobs:\n"];
+            WriteString[strm,"  - reduce_user_defined_system:\n"];
+            WriteString[strm,"      input_system: system\n"];
+            WriteString[strm,"      select_integrals:\n"];
+            WriteString[strm,"        select_mandatory_list:\n"];
+            WriteString[strm,"          - [KiraINT,list]\n"];
+            WriteString[strm,"      preferred_masters: masters\n"];
+            WriteString[strm,"      run_symmetries: true\n"];
+            WriteString[strm,"      run_initiate: true\n"];
+            WriteString[strm,"      run_triangular: true\n"];
+            WriteString[strm,"      run_back_substitution: true\n"];
+            WriteString[strm,"  - kira2math:\n"];
+            WriteString[strm,"      target:\n"];
+            WriteString[strm,"        - [KiraINT,list]\n"];
 
-    If [err != 0, 
-        DeleteDirectory[dir,DeleteContents->True];
-        Return[$Failed]];
+            Close[strm];
 
-    res = Get[dir<>"/results/KiraINT/kira_list.m"];
-    DeleteDirectory[dir,DeleteContents->True];
+            SetDirectory[dir];
+            err = Run["kira"<>If[threads>1," --parallel="<>ToString[threads],""]<>" jobs.yaml"];
+            ResetDirectory[];
 
-    res = (KiraINT/@Range[dim+1,2*dim])/.res;
-    
-    If [Union[Cases[res,KiraINT[n_]->n,Infinity]] =!= Range[dim], Return[$Failed]];
+            If [err != 0, 
+                DeleteDirectory[dir,DeleteContents->True];
+                Return[$Failed]];
 
-    res = Coefficient[#,KiraINT/@Range[dim]] &/@res;
+            res = Get[dir<>"/results/KiraINT/kira_list.m"];
+            DeleteDirectory[dir,DeleteContents->True];
 
-    Return[res];
-];
+            res = (Global`KiraINT/@Range[dim+1,2*dim])/.res;
+            
+            If [Union[Cases[res,Global`KiraINT[n_]->n,Infinity]] =!= Range[dim], Return[$Failed]];
 
+            res = Coefficient[#,Global`KiraINT/@Range[dim]] &/@res;
+
+            Return[res];
+        ];
+    End[];
 EndPackage[];
 
